@@ -75,7 +75,7 @@ class JesterSmith < Thor
       run("mount /dev/#{storage}/#{name} #{@build_dir}", {:verbose => @verbose})
 
       # debootstrap
-      versions = ["lenny", "squeeze32", "squeeze64"]
+      versions = ["lenny", "squeeze32", "squeeze64", "wheezy"]
       raise ArgumentError, "version #{@version} not known" if !versions.include?(@version)
       case
         when @version == "lenny"
@@ -90,6 +90,10 @@ class JesterSmith < Thor
           @arch = "amd64"
           @kernel = "linux-image-2.6-amd64"
           @base = "squeeze"
+        when @version == "wheezy"
+          @arch = "amd64"
+          @kernel = "linux-image-3.1.0-1-amd64"
+          @base = "wheezy"
       end
       # running the debootstrap
       say "Deboostraping #{name} as #{@version}", :green
@@ -136,9 +140,16 @@ class JesterSmith < Thor
     # setting up apt stuff : sources and do an update
     def apt_setup(name)
       # sources for apt
+#      apt_sources = <<-EOF
+#        deb http://mir1.ovh.net/debian/ #{@base} main contrib non-free
+#        deb-src http://mir1.ovh.net/debian/ #{@base} main contrib non-free
+#
+#        deb http://security.debian.org/ #{@base}/updates main
+#        deb-src http://security.debian.org/ #{@base}/updates main
+#      EOF
       apt_sources = <<-EOF
-        deb http://mir1.ovh.net/debian/ #{@base} main contrib non-free
-        deb-src http://mir1.ovh.net/debian/ #{@base} main contrib non-free
+        deb http://mirror.ovh.net/debian/ #{@base} main
+        deb-src http://mirror.ovh.net/debian/ #{@base} main
 
         deb http://security.debian.org/ #{@base}/updates main
         deb-src http://security.debian.org/ #{@base}/updates main
@@ -266,7 +277,7 @@ class JesterSmith < Thor
       @vcpus = class_data["vcpus"]
       @version = class_data["version"]
       @packages = class_data["packages"] || Array.new
-      @daemons = class_data["daemons"]
+      @daemons = class_data["daemons"] || Array.new
       @base = class_data["base"]
       say "Loaded class #{class_name} !", :green
     end
@@ -343,9 +354,13 @@ class JesterSmith < Thor
       \tversion : #{@version}
       \tclasse: #{@class}
       \tip : #{@ip}
-      \tgateway : #{@gateway}
-      \tpackages : #{@packages.join(", ")}
-      \tdaemons : #{@daemons.join(", ")}\n", :yellow
+      \tgateway : #{@gateway}\n", :yellow
+      if @packages.count > 0
+          say "\tpackages : #{@packages.join(", ")}\n", :yellow
+      end
+      if @daemons.count > 0
+          say "\tdaemons : #{@daemons.join(", ")}\n", :yellow
+      end
       if no?("Would you like to proceed ?")
         exit(0)
       end
